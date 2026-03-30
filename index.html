@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jelly Project</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="jelly-lab-container">
+    <header>
+      <h1>GummyLab</h1>
+      <p>Лаборатория создания блоков</p>
+    </header>
+    <section class="bricks">
+      <div class="row">
+        <img src="assets/orange_brick.png" alt="orange brick" class="brick orange">
+        <img src="assets/pink_brick.png" alt="pink brick" class="brick pink">
+      </div>
+      <div class="row right">
+        <img src="assets/orange_brick.png" alt="orange brick" class="brick orange">
+        <img src="assets/pink_brick.png" alt="pink brick" class="brick pink">
+      </div>
+    </section>
+      <p class="materials-title">Соберем материалы<br>для будущего дома</p>
+    <div class="layout-wrap">
+      <img src="assets/header.png" alt="Jelly Project Layout" class="layout" />
+      <div class="grid-overlay" id="gridOverlay"></div>
+      <img src="assets/pointer_orange.png" alt="pointer" class="pointer-orange" />
+      <div class="center-circle" id="centerCircle">
+        <img src="assets/plate_001.png" alt="plate frame 1" class="plate-frame" id="plateFrame1" />
+        <img src="assets/plate_002.png" alt="plate frame 2" class="plate-frame" id="plateFrame2" />
+        <img src="assets/plate_003.png" alt="plate frame 3" class="plate-frame" id="plateFrame3" />
+        <img src="assets/particles.png" alt="particles" id="particles" />
+      </div>
+    </div>
+    <p class="ingredient-text">Смешаем ингредиенты для<br>мармеладных кирпичиков</p>
+    <p class="instruction-text" id="instructionText">Перетащи ингредиенты<br>в тарелку</p>
+    <div class="diagonal-line" data-control="colorer"></div>
+    <div class="horizontal-line" data-control="colorer"></div>
+    <img src="assets/colorer.png" alt="colorer" class="colorer-on-right-line" data-item="colorer" />
+    <p class="colorer-label" data-control="colorer">Краситель</p>
+    <div class="diagonal-line-left" data-control="lemon"></div>
+    <div class="horizontal-line-left" data-control="lemon"></div>
+    <img src="assets/lemon.png" alt="lemon" class="lemon-on-left-line" data-item="lemon" />
+    <p class="lemon-label" data-control="lemon">Лимон</p>
+    <div class="diagonal-line-bottom" data-control="gelato"></div>
+    <div class="horizontal-line-bottom" data-control="gelato"></div>
+    <img src="assets/sugar.png" alt="sugar" class="sugar-on-bottom-left" data-item="sugar" />
+    <p class="sugar-label" data-control="sugar">Сахар</p>
+    <div class="diagonal-line-bottom-left" data-control="sugar"></div>
+    <div class="horizontal-line-bottom-left" data-control="sugar"></div>
+    <img src="assets/gelato.png" alt="gelato" class="gelato-on-bottom-right" data-item="gelato" />
+    <p class="gelato-label" data-control="gelato">Желатин</p>
+  </div>
+  <div class="body-wrap" id="blockGame">
+    <img src="assets/body.png" alt="Jelly Project Body" class="body-section" />
+    <img src="assets/pointer_orange.png" alt="pointer" class="pointer-orange-body" />
+    <img src="assets/pointer_pink.png" alt="pointer" class="pointer-pink-body" />
+    <div class="block_drop_point" id="blockDropPoint" aria-hidden="true"></div>
+    <div class="basket-info-panel" aria-live="polite">
+      <p class="basket-info-title">Поймай все кирпичики</p>
+      <p class="basket-info-line">Очки: <span id="caughtCount">0</span></p>
+      <p class="basket-info-line">Цель: <span id="goalCount">10</span></p>
+    </div>
+    <button class="game-start" id="gameStart" type="button">Запустить механизм</button>
+    <img src="assets/basket.png" alt="basket" class="basket" id="gameBasket" />
+    <p class="build-house-title">Построим дом мечты</p>
+    <p class="build-house-text">Спроектируй дом,<br>перетаскивая блоки</p>
+    <div class="build-house-layout" aria-hidden="true">
+      <img src="assets/build_a_house/pink_buildblock.png" alt="" class="build-house-pink" />
+      <img src="assets/build_a_house/orange_buildblock.png" alt="" class="build-house-orange" />
+      <img src="assets/build_a_house/blue_buildblock.png" alt="" class="build-house-blue" />
+      <img src="assets/build_a_house/green_buildblock.png" alt="" class="build-house-green" />
+    </div>
+    <div class="bottom-red-border" aria-hidden="true"></div>
+    <p class="signature-name">Арина<br>Прокопенко</p>
+    <p class="signature-name signature-name-right">Кураторы:<br>Камила, Нона</p>
+    <p class="group-code">Б25УКИ03</p>
+    <button class="game-start build-clear-button" id="buildClear" type="button">Очистить</button>
+  </div>
+  <script>
+    const overlay = document.getElementById('gridOverlay');
+    const rightPink = document.querySelector('.row.right .pink');
+    const colors = ['#9BC272', '#DF8FB1', '#76BCD4', '#EB8850'];
+    const blockGameState = {
+      root: null,
+      dropPoint: null,
+      basket: null,
+      score: null,
+      start: null,
+      activeBlocks: [],
+      spawnTimer: null,
+      animationFrame: null,
+      lastFrameTime: 0,
+      caught: 0,
+      target: 10,
+      isRunning: false,
+      isWon: false,
+      blockImages: [
+        'assets/blue_block.png',
+        'assets/green_block.png',
+        'assets/orange_block.png',
+        'assets/pink_block.png',
+      ],
+    };
+
+    function getRandomColor() {
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function getRandomDelay(min = 2000, max = 5000) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function updateBlockScore() {
+      if (blockGameState.score) {
+        blockGameState.score.textContent = blockGameState.caught;
+      }
+    }
+
+    function updateStartButtonLabel() {
+      if (blockGameState.start) {
+        blockGameState.start.textContent = blockGameState.isRunning ? 'Завершить механизм' : 'Запустить механизм';
+      }
+    }
+
+    function setBasketVisibility(isVisible) {
+      if (blockGameState.basket) {
+        blockGameState.basket.style.visibility = isVisible ? 'visible' : 'hidden';
+        blockGameState.basket.style.opacity = isVisible ? '1' : '0';
+      }
+    }
+
+    function clearFallingBlocks() {
+      blockGameState.activeBlocks.forEach(block => block.el.remove());
+      blockGameState.activeBlocks = [];
+    }
+
+    function stopBlockDropGame() {
+      if (blockGameState.spawnTimer) {
+        clearTimeout(blockGameState.spawnTimer);
+        blockGameState.spawnTimer = null;
+      }
+
+      if (blockGameState.animationFrame) {
+        cancelAnimationFrame(blockGameState.animationFrame);
+        blockGameState.animationFrame = null;
+      }
+
+      blockGameState.lastFrameTime = 0;
+      blockGameState.isRunning = false;
+      updateStartButtonLabel();
+    }
+
+    function positionBasket(clientX) {
+      if (!blockGameState.root || !blockGameState.basket) return;
+
+      const rootRect = blockGameState.root.getBoundingClientRect();
+      const basketWidth = blockGameState.basket.offsetWidth || 0;
+      const relativeX = clientX - rootRect.left;
+      const minX = basketWidth / 2;
+      const maxX = rootRect.width - basketWidth / 2;
+      const clampedX = Math.min(Math.max(relativeX, minX), maxX);
+
+      blockGameState.basket.style.left = `${clampedX}px`;
+    }
+
+    function centerBasket() {
+      if (!blockGameState.root) return;
+      const rect = blockGameState.root.getBoundingClientRect();
+      positionBasket(rect.left + rect.width / 2);
+    }
+
+    function spawnFallingBlock() {
+      if (!blockGameState.root || !blockGameState.dropPoint || blockGameState.isWon) return;
+
+      const rootRect = blockGameState.root.getBoundingClientRect();
+      const dropRect = blockGameState.dropPoint.getBoundingClientRect();
+      const minX = dropRect.left - rootRect.left + 24;
+      const maxX = dropRect.right - rootRect.left - 24;
+
+      const block = document.createElement('img');
+      block.className = 'falling-block';
+      block.alt = 'falling jelly block';
+      block.src = blockGameState.blockImages[Math.floor(Math.random() * blockGameState.blockImages.length)];
+
+      const blockState = {
+        el: block,
+        x: Math.random() * Math.max(maxX - minX, 40) + minX,
+        y: dropRect.top - rootRect.top - 8,
+        speed: 360 + Math.random() * 180,
+        rotation: Math.random() * 24 - 12,
+      };
+
+      block.style.left = `${blockState.x}px`;
+      block.style.top = `${blockState.y}px`;
+      block.style.transform = `translateX(-50%) rotate(${blockState.rotation}deg)`;
+
+      blockGameState.root.appendChild(block);
+      blockGameState.activeBlocks.push(blockState);
+    }
+
+    function scheduleNextBlock() {
+      if (!blockGameState.isRunning || blockGameState.isWon) return;
+
+      blockGameState.spawnTimer = setTimeout(() => {
+        spawnFallingBlock();
+        scheduleNextBlock();
+      }, 780 + Math.random() * 420);
+    }
+
+    function winBlockDropGame() {
+      blockGameState.isWon = true;
+      stopBlockDropGame();
+      setBasketVisibility(false);
+
+      setTimeout(clearFallingBlocks, 180);
+    }
+
+    function gameLoop(timestamp) {
+      if (!blockGameState.isRunning || !blockGameState.root || !blockGameState.basket) return;
+
+      if (!blockGameState.lastFrameTime) {
+        blockGameState.lastFrameTime = timestamp;
+      }
+
+      const delta = (timestamp - blockGameState.lastFrameTime) / 1000;
+      blockGameState.lastFrameTime = timestamp;
+
+      const rootRect = blockGameState.root.getBoundingClientRect();
+      const basketRect = blockGameState.basket.getBoundingClientRect();
+
+      blockGameState.activeBlocks = blockGameState.activeBlocks.filter(block => {
+        block.y += block.speed * delta;
+        block.el.style.top = `${block.y}px`;
+
+        const blockRect = block.el.getBoundingClientRect();
+        const caught =
+          blockRect.bottom >= basketRect.top &&
+          blockRect.top <= basketRect.bottom &&
+          blockRect.right >= basketRect.left &&
+          blockRect.left <= basketRect.right;
+
+        if (caught) {
+          blockGameState.caught += 1;
+          updateBlockScore();
+          block.el.classList.add('caught');
+          setTimeout(() => block.el.remove(), 120);
+
+          if (blockGameState.caught >= blockGameState.target) {
+            winBlockDropGame();
+          }
+
+          return false;
+        }
+
+        if (block.y > rootRect.height + 80) {
+          block.el.remove();
+          return false;
+        }
+
+        return true;
+      });
+
+      if (blockGameState.isRunning) {
+        blockGameState.animationFrame = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function startBlockDropGame() {
+      if (!blockGameState.root) return;
+
+      stopBlockDropGame();
+      clearFallingBlocks();
+
+      blockGameState.caught = 0;
+      blockGameState.isWon = false;
+      updateBlockScore();
+      setBasketVisibility(true);
+
+      centerBasket();
+
+      blockGameState.isRunning = true;
+      updateStartButtonLabel();
+      scheduleNextBlock();
+      blockGameState.animationFrame = requestAnimationFrame(gameLoop);
+    }
+
+    function toggleBlockDropGame() {
+      if (blockGameState.isRunning) {
+        stopBlockDropGame();
+        clearFallingBlocks();
+        blockGameState.isWon = false;
+        return;
+      }
+
+      startBlockDropGame();
+    }
+
+    function initBlockDropGame() {
+      blockGameState.root = document.getElementById('blockGame');
+      blockGameState.dropPoint = document.getElementById('blockDropPoint');
+      blockGameState.basket = document.getElementById('gameBasket');
+      blockGameState.score = document.getElementById('caughtCount');
+      blockGameState.start = document.getElementById('gameStart');
+
+      if (!blockGameState.root || !blockGameState.dropPoint || !blockGameState.basket) return;
+
+      blockGameState.root.addEventListener('pointermove', event => {
+        if (!blockGameState.isRunning || blockGameState.isWon) return;
+        positionBasket(event.clientX);
+      });
+
+      if (blockGameState.start) {
+        blockGameState.start.addEventListener('click', toggleBlockDropGame);
+      }
+
+      setBasketVisibility(true);
+      centerBasket();
+      updateBlockScore();
+      updateStartButtonLabel();
+    }
+
+    function initBuildBlockDragDrop() {
+      const root = document.getElementById('blockGame');
+      if (!root || root.dataset.buildDragReady === 'true') return;
+
+      const dropZone = root.querySelector('.bottom-red-border');
+      const paletteBlocks = root.querySelectorAll('.build-house-layout img');
+      const clearButton = document.getElementById('buildClear');
+
+      if (!dropZone || !paletteBlocks.length) return;
+
+      root.dataset.buildDragReady = 'true';
+
+      if (clearButton) {
+        clearButton.addEventListener('click', () => {
+          dropZone.querySelectorAll('.placed-build-block').forEach(block => block.remove());
+        });
+      }
+      paletteBlocks.forEach(block => {
+        block.ondragstart = () => false;
+      });
+
+      root.addEventListener('pointerdown', event => {
+        const dragSource = event.target.closest('.placed-build-block, .build-house-layout img');
+        if (!dragSource || !root.contains(dragSource)) return;
+
+        event.preventDefault();
+
+        const fromPalette = Boolean(dragSource.closest('.build-house-layout'));
+        const previousParent = fromPalette ? null : dragSource.parentElement;
+        const previousLeft = dragSource.style.left || '';
+        const previousTop = dragSource.style.top || '';
+        const previousWidth = dragSource.style.width || '';
+        const previousZIndex = dragSource.style.zIndex || '';
+
+        const rootRect = root.getBoundingClientRect();
+        const startRect = dragSource.getBoundingClientRect();
+        const dragBlock = fromPalette ? dragSource.cloneNode(true) : dragSource;
+
+        dragBlock.ondragstart = () => false;
+        dragBlock.classList.add('placed-build-block');
+
+        root.appendChild(dragBlock);
+        dragBlock.style.position = 'absolute';
+        dragBlock.style.left = `${startRect.left - rootRect.left}px`;
+        dragBlock.style.top = `${startRect.top - rootRect.top}px`;
+        dragBlock.style.width = `${startRect.width}px`;
+        dragBlock.style.height = 'auto';
+        dragBlock.style.right = 'auto';
+        dragBlock.style.bottom = 'auto';
+        dragBlock.style.margin = '0';
+        dragBlock.style.scale = '1';
+        dragBlock.style.transform = 'none';
+        dragBlock.style.zIndex = '12';
+        dragBlock.style.cursor = 'grabbing';
+
+        const shiftX = event.clientX - startRect.left;
+        const shiftY = event.clientY - startRect.top;
+
+        const onPointerMove = moveEvent => {
+          dragBlock.style.left = `${moveEvent.clientX - rootRect.left - shiftX}px`;
+          dragBlock.style.top = `${moveEvent.clientY - rootRect.top - shiftY}px`;
+        };
+
+        const onPointerUp = () => {
+          document.removeEventListener('pointermove', onPointerMove);
+
+          const zoneRect = dropZone.getBoundingClientRect();
+          const placedRect = dragBlock.getBoundingClientRect();
+          const centerX = placedRect.left + placedRect.width / 2;
+          const centerY = placedRect.top + placedRect.height / 2;
+
+          const isInsideZone =
+            centerX >= zoneRect.left &&
+            centerX <= zoneRect.right &&
+            centerY >= zoneRect.top &&
+            centerY <= zoneRect.bottom;
+
+          if (isInsideZone) {
+            const maxLeft = Math.max(zoneRect.width - placedRect.width, 0);
+            const maxTop = Math.max(zoneRect.height - placedRect.height, 0);
+            const localLeft = Math.min(Math.max(placedRect.left - zoneRect.left, 0), maxLeft);
+            const localTop = Math.min(Math.max(placedRect.top - zoneRect.top, 0), maxTop);
+
+            dropZone.appendChild(dragBlock);
+            dragBlock.style.left = `${localLeft}px`;
+            dragBlock.style.top = `${localTop}px`;
+            dragBlock.style.width = `${placedRect.width}px`;
+          } else if (fromPalette) {
+            dragBlock.remove();
+          } else if (previousParent) {
+            previousParent.appendChild(dragBlock);
+            dragBlock.style.left = previousLeft;
+            dragBlock.style.top = previousTop;
+            dragBlock.style.width = previousWidth;
+            dragBlock.style.zIndex = previousZIndex || '12';
+          }
+
+          dragBlock.style.cursor = 'grab';
+        };
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp, { once: true });
+      });
+    }
+
+    function setupBrickJiggle() {
+      const bricks = document.querySelectorAll('.brick');
+
+      bricks.forEach(brick => {
+        function scheduleJiggle() {
+          setTimeout(() => {
+            brick.style.animation = 'none';
+            setTimeout(() => {
+              if (brick.classList.contains('orange')) {
+                brick.style.animation = 'jiggle-orange 0.3s linear';
+              } else if (brick.classList.contains('pink')) {
+                brick.style.animation = 'jiggle-pink 0.3s linear';
+              } else {
+                brick.style.animation = 'jiggle 0.3s linear';
+              }
+
+              setTimeout(() => {
+                brick.style.animation = 'none';
+                scheduleJiggle();
+              }, 300);
+            }, 10);
+          }, getRandomDelay());
+        }
+
+        scheduleJiggle();
+      });
+    }
+
+    function positionAndBuildGrid() {
+      if (!rightPink) return;
+
+      const parentRect = overlay.parentElement.getBoundingClientRect();
+      const pinkRect = rightPink.getBoundingClientRect();
+      const topOffset = pinkRect.bottom - parentRect.top - 11 + (22 * 2);
+
+      overlay.style.top = `${topOffset}px`;
+      overlay.style.height = `${24 * 6}px`;
+
+      overlay.innerHTML = '';
+      const cols = Math.floor(overlay.clientWidth / 24);
+      const rows = 6;
+      const count = cols * rows;
+
+      for (let i = 0; i < count; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'grid-cell';
+        let clearTimer;
+
+        cell.addEventListener('mouseenter', function() {
+          if (clearTimer) clearTimeout(clearTimer);
+          this.style.backgroundColor = getRandomColor();
+        });
+
+        cell.addEventListener('mouseleave', function() {
+          clearTimer = setTimeout(() => {
+            this.style.backgroundColor = '';
+          }, 800);
+        });
+
+        overlay.appendChild(cell);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      positionAndBuildGrid();
+      centerBasket();
+    });
+
+    window.addEventListener('load', () => {
+      positionAndBuildGrid();
+      setupBrickJiggle();
+      initDragAndDrop();
+      initBlockDropGame();
+      initBuildBlockDragDrop();
+    });
+
+    function initDragAndDrop() {
+      const centerCircle = document.getElementById('centerCircle');
+      const instructionText = document.getElementById('instructionText');
+      const ingredients = document.querySelectorAll('[data-item]');
+      const dropped = new Set();
+      const totalItems = ingredients.length;
+
+      ingredients.forEach(item => {
+        item.style.cursor = 'grab';
+        item.style.touchAction = 'none';
+        item.ondragstart = () => false;
+
+        let dragState = null;
+        let originalStyle = null;
+        let dragClone = null;
+
+        const resetOriginal = () => {
+          if (!originalStyle) return;
+          Object.keys(originalStyle).forEach(key => {
+            item.style[key] = originalStyle[key];
+          });
+          item.style.visibility = 'visible';
+          item.style.opacity = '';
+          item.classList.remove('dragging');
+        };
+
+        item.addEventListener('pointerdown', event => {
+          if (dropped.has(item.dataset.item)) return;
+          event.preventDefault();
+
+          const rect = item.getBoundingClientRect();
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const shiftX = startX - rect.left;
+          const shiftY = startY - rect.top;
+
+          originalStyle = {
+            position: item.style.position || '',
+            left: item.style.left || '',
+            top: item.style.top || '',
+            transform: item.style.transform || '',
+            zIndex: item.style.zIndex || '',
+          };
+
+          dragClone = item.cloneNode(true);
+          dragClone.style.position = 'fixed';
+          dragClone.style.left = `${startX - shiftX}px`;
+          dragClone.style.top = `${startY - shiftY}px`;
+          dragClone.style.width = `${rect.width}px`;
+          dragClone.style.height = `${rect.height}px`;
+          dragClone.style.pointerEvents = 'none';
+          dragClone.style.zIndex = '9999';
+          dragClone.style.opacity = '0.8';
+          dragClone.classList.add('dragging');
+          document.body.appendChild(dragClone);
+
+          item.style.visibility = 'hidden';
+
+          dragState = { shiftX, shiftY };
+
+          const moveHandler = e => {
+            if (!dragState || !dragClone) return;
+            dragClone.style.left = `${e.clientX - dragState.shiftX}px`;
+            dragClone.style.top = `${e.clientY - dragState.shiftY}px`;
+          };
+
+          const upHandler = e => {
+            if (!dragState) return;
+            document.removeEventListener('pointermove', moveHandler);
+            document.removeEventListener('pointerup', upHandler);
+
+            if (dragClone) {
+              dragClone.remove();
+              dragClone = null;
+            }
+
+            const circleRect = centerCircle.getBoundingClientRect();
+            const dropX = e.clientX;
+            const dropY = e.clientY;
+
+            const droppedInCircle =
+              dropX >= circleRect.left &&
+              dropX <= circleRect.right &&
+              dropY >= circleRect.top &&
+              dropY <= circleRect.bottom;
+
+            if (droppedInCircle) {
+              const itemKey = item.dataset.item;
+              if (dropped.has(itemKey)) {
+                resetOriginal();
+              } else {
+                document.querySelectorAll(`[data-control="${itemKey}"]`).forEach(el => {
+                  el.style.display = 'none';
+                });
+
+                item.style.position = 'absolute';
+                item.style.left = '50%';
+                item.style.top = `${45 + dropped.size * 11}%`;
+                item.style.transform = 'translate(-50%, -50%) scale(0.85)';
+                item.style.zIndex = '12';
+                item.draggable = false;
+                item.style.cursor = 'default';
+                item.style.visibility = 'visible';
+                centerCircle.appendChild(item);
+
+                dropped.add(itemKey);
+
+                if (dropped.size === totalItems) {
+                  ingredients.forEach(ing => {
+                    if (dropped.has(ing.dataset.item)) {
+                      ing.style.display = 'none';
+                    }
+                  });
+
+                  centerCircle.style.borderColor = '#fff';
+                  centerCircle.style.backgroundColor = 'rgba(155, 194, 114, 0.05)';
+
+                  document.getElementById('plateFrame1').classList.add('show');
+
+                  setTimeout(() => {
+                    document.getElementById('plateFrame1').classList.remove('show');
+                    document.getElementById('plateFrame2').classList.add('show');
+                  }, 750);
+
+                  setTimeout(() => {
+                    document.getElementById('plateFrame2').classList.remove('show');
+                    document.getElementById('plateFrame3').classList.add('show');
+                    document.getElementById('particles').classList.add('show');
+                  }, 1500);
+                }
+              }
+            } else {
+              resetOriginal();
+            }
+
+            item.style.cursor = dropped.has(item.dataset.item) ? 'default' : 'grab';
+            dragState = null;
+          };
+
+          document.addEventListener('pointermove', moveHandler);
+          document.addEventListener('pointerup', upHandler);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
